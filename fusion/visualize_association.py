@@ -21,36 +21,18 @@ from radar.src.radar_objects import RadarObjectExtractor
 from camera.src.camera_detector import CameraDetector
 
 
-DATASET = (
-    Path.home()
-    / "Desktop"
-    / "RADIal_data"
-    / "RECORD@2020-11-21_13.44.44"
+from config import (
+    get_default_recording_dir,
+    get_dbreader_dir,
+    get_radar_calibration_path,
+    get_camera_calibration_path,
 )
 
-DBREADER = (
-    Path.home()
-    / "Desktop"
-    / "RADIal"
-    / "DBReader"
-)
 
-RADAR_CALIBRATION = (
-    Path.home()
-    / "Desktop"
-    / "RADIal"
-    / "SignalProcessing"
-    / "CalibrationTable.npy"
-)
-
-CAMERA_CALIBRATION = (
-    Path.home()
-    / "Desktop"
-    / "RADIal"
-    / "DBReader"
-    / "examples"
-    / "camera_calib.npy"
-)
+DATASET = get_default_recording_dir()
+DBREADER = get_dbreader_dir(DATASET)
+RADAR_CALIBRATION = get_radar_calibration_path(DATASET)
+CAMERA_CALIBRATION = get_camera_calibration_path(DATASET)
 
 
 def main():

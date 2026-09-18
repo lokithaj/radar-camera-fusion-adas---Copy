@@ -1,27 +1,18 @@
-from pathlib import Path
-
 import numpy as np
-
+import pytest
+from config import get_default_recording_dir, get_dbreader_dir
 from fusion.src.sync_loader import (
     SynchronizedFusionLoader,
 )
 
+DATASET = get_default_recording_dir()
+DBREADER = get_dbreader_dir(DATASET)
 
-DATASET = (
-    Path.home()
-    / "Desktop"
-    / "RADIal_data"
-    / "RECORD@2020-11-21_13.44.44"
+
+@pytest.mark.skipif(
+    not (DATASET.exists() and DBREADER.exists()),
+    reason="RADIal dataset or DBReader not found",
 )
-
-DBREADER = (
-    Path.home()
-    / "Desktop"
-    / "RADIal"
-    / "DBReader"
-)
-
-
 def test_synchronized_radar_camera():
 
     loader = SynchronizedFusionLoader(

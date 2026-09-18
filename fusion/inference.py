@@ -18,38 +18,18 @@ from radar.src.radar_objects import RadarObjectExtractor
 from camera.src.camera_detector import CameraDetector
 
 
-DEFAULT_DBREADER = (
-    Path.home()
-    / "Desktop"
-    / "RADIal"
-    / "DBReader"
+from config import (
+    DEFAULT_MODEL_PATH,
+    DEFAULT_YOLO_MODEL,
+    DEFAULT_OUTPUT_DIR,
+    get_dbreader_dir,
+    get_radar_calibration_path,
+    get_camera_calibration_path,
 )
 
-DEFAULT_RADAR_CALIBRATION = (
-    Path.home()
-    / "Desktop"
-    / "RADIal"
-    / "SignalProcessing"
-    / "CalibrationTable.npy"
-)
 
-DEFAULT_CAMERA_CALIBRATION = (
-    Path.home()
-    / "Desktop"
-    / "RADIal"
-    / "DBReader"
-    / "examples"
-    / "camera_calib.npy"
-)
-
-DEFAULT_MODEL = (
-    Path.home()
-    / "Desktop"
-    / "radar-camera-fusion-adas"
-    / "fusion"
-    / "models"
-    / "radar_camera_fusion.pkl"
-)
+DEFAULT_MODEL = DEFAULT_MODEL_PATH
+DEFAULT_OUTPUT = DEFAULT_OUTPUT_DIR
 
 
 FRAME_STEP = 5
@@ -262,16 +242,56 @@ def get_ml_associations(
     return associations
 
 
-def run(recording_path):
+def run(
+    recording_path,
+    model_path=None,
+    dbreader_dir=None,
+    radar_calib_path=None,
+    camera_calib_path=None,
+    output_dir=None,
+):
     """Run inference on a user-selected recording."""
 
     recording_path = Path(
         recording_path
-    )
+    ).resolve()
 
     if not recording_path.exists():
         raise FileNotFoundError(
             f"Recording not found:\n{recording_path}"
+        )
+
+    if not recording_path.is_dir():
+        raise NotADirectoryError(
+            f"Recording path is not a directory:\n{recording_path}"
+        )
+
+    dbreader = get_dbreader_dir(recording_path, dbreader_dir)
+    if not dbreader.exists():
+        raise FileNotFoundError(
+            f"RADIal DBReader directory not found:\n{dbreader}\n"
+            "Please specify --dbreader or set the RADIAL_DBREADER_DIR environment variable."
+        )
+
+    radar_calibration = get_radar_calibration_path(recording_path, radar_calib_path)
+    if not radar_calibration.exists():
+        raise FileNotFoundError(
+            f"Radar calibration file not found:\n{radar_calibration}\n"
+            "Please specify --radar-calib or set the RADIAL_RADAR_CALIB environment variable."
+        )
+
+    camera_calibration = get_camera_calibration_path(recording_path, camera_calib_path)
+    if not camera_calibration.exists():
+        raise FileNotFoundError(
+            f"Camera calibration file not found:\n{camera_calibration}\n"
+            "Please specify --camera-calib or set the RADIAL_CAMERA_CALIB environment variable."
+        )
+
+    model_file = Path(model_path).resolve() if model_path else DEFAULT_MODEL_PATH
+    if not model_file.exists():
+        raise FileNotFoundError(
+            f"Fusion ML model not found:\n{model_file}\n"
+            "Please train the model or specify --model."
         )
 
     print(
@@ -285,7 +305,7 @@ def run(recording_path):
 
     loader = SynchronizedFusionLoader(
         recording_path,
-        DEFAULT_DBREADER,
+        dbreader,
     )
 
     print(
@@ -294,16 +314,16 @@ def run(recording_path):
     )
 
     camera_detector = CameraDetector(
-        model_name="yolo11n.pt",
+        model_name=str(DEFAULT_YOLO_MODEL) if DEFAULT_YOLO_MODEL.exists() else "yolo11n.pt",
         confidence=YOLO_CONFIDENCE,
     )
 
     projector = RadarCameraProjector(
-        DEFAULT_CAMERA_CALIBRATION
+        camera_calibration
     )
 
     fusion_model = FusionMLModel(
-        DEFAULT_MODEL
+        model_file
     )
 
     print(
@@ -335,7 +355,7 @@ def run(recording_path):
         try:
             radar_objects = process_radar(
                 data,
-                DEFAULT_RADAR_CALIBRATION,
+                radar_calibration,
             )
 
         except Exception as error:
@@ -622,10 +642,45 @@ def main():
         ),
     )
 
+    parser.add_argument(
+        "--model",
+        default=None,
+        help=f"Path to trained fusion ML model (default: {DEFAULT_MODEL_PATH}).",
+    )
+
+    parser.add_argument(
+        "--dbreader",
+        default=None,
+        help="Path to RADIal DBReader directory (auto-discovered if omitted).",
+    )
+
+    parser.add_argument(
+        "--radar-calib",
+        default=None,
+        help="Path to CalibrationTable.npy (auto-discovered if omitted).",
+    )
+
+    parser.add_argument(
+        "--camera-calib",
+        default=None,
+        help="Path to camera_calib.npy (auto-discovered if omitted).",
+    )
+
+    parser.add_argument(
+        "--output-dir",
+        default=None,
+        help=f"Directory to save outputs (default: {DEFAULT_OUTPUT_DIR}).",
+    )
+
     args = parser.parse_args()
 
     run(
-        args.recording
+        recording_path=args.recording,
+        model_path=args.model,
+        dbreader_dir=args.dbreader,
+        radar_calib_path=args.radar_calib,
+        camera_calib_path=args.camera_calib,
+        output_dir=args.output_dir,
     )
 
 

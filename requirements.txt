@@ -2,6 +2,7 @@ numpy
 pandas
 opencv-python
 scikit-learn
+scipy
 joblib
 mkl_fft
 pytest

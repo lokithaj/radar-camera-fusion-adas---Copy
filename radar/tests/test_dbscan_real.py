@@ -10,29 +10,22 @@ from radar.src.real_point_generator import RealRadarPointGenerator
 from radar.src.dbscan_clusterer import RadarDBSCAN
 
 
-DATASET = (
-    Path.home()
-    / "Desktop"
-    / "RADIal_data"
-    / "RECORD@2020-11-21_13.44.44"
+import pytest
+from config import (
+    get_default_recording_dir,
+    get_dbreader_dir,
+    get_radar_calibration_path,
 )
 
-DBREADER = (
-    Path.home()
-    / "Desktop"
-    / "RADIal"
-    / "DBReader"
+DATASET = get_default_recording_dir()
+DBREADER = get_dbreader_dir(DATASET)
+CALIBRATION = get_radar_calibration_path(DATASET)
+
+
+@pytest.mark.skipif(
+    not (DATASET.exists() and DBREADER.exists() and CALIBRATION.exists()),
+    reason="RADIal dataset, DBReader, or calibration not found",
 )
-
-CALIBRATION = (
-    Path.home()
-    / "Desktop"
-    / "RADIal"
-    / "SignalProcessing"
-    / "CalibrationTable.npy"
-)
-
-
 def test_dbscan_on_real_radar():
 
     # ---------------------------------------------------------

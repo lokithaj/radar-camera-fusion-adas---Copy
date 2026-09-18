@@ -25,38 +25,24 @@ from radar.src.radar_objects import RadarObjectExtractor
 from camera.src.camera_detector import CameraDetector
 
 
-DATASET = (
-    Path.home()
-    / "Desktop"
-    / "RADIal_data"
-    / "RECORD@2020-11-21_13.44.44"
+import pytest
+from config import (
+    get_default_recording_dir,
+    get_dbreader_dir,
+    get_radar_calibration_path,
+    get_camera_calibration_path,
 )
 
-DBREADER = (
-    Path.home()
-    / "Desktop"
-    / "RADIal"
-    / "DBReader"
+DATASET = get_default_recording_dir()
+DBREADER = get_dbreader_dir(DATASET)
+RADAR_CALIBRATION = get_radar_calibration_path(DATASET)
+CAMERA_CALIBRATION = get_camera_calibration_path(DATASET)
+
+
+@pytest.mark.skipif(
+    not (DATASET.exists() and DBREADER.exists() and RADAR_CALIBRATION.exists() and CAMERA_CALIBRATION.exists()),
+    reason="RADIal dataset, DBReader, or calibration files not found",
 )
-
-RADAR_CALIBRATION = (
-    Path.home()
-    / "Desktop"
-    / "RADIal"
-    / "SignalProcessing"
-    / "CalibrationTable.npy"
-)
-
-CAMERA_CALIBRATION = (
-    Path.home()
-    / "Desktop"
-    / "RADIal"
-    / "DBReader"
-    / "examples"
-    / "camera_calib.npy"
-)
-
-
 def test_real_radar_camera_association():
 
     # ---------------------------------------------------------

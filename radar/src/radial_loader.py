@@ -30,11 +30,15 @@ class RADIalLoader:
 
         # Location of the official RADIal DBReader.
         if dbreader_dir is None:
-            dbreader_dir = (
-                self.sequence_dir.parents[1]
-                / "RADIal"
-                / "DBReader"
-            )
+            try:
+                from config import get_dbreader_dir
+                dbreader_dir = get_dbreader_dir(recording_dir=self.sequence_dir)
+            except Exception:
+                dbreader_dir = (
+                    self.sequence_dir.parents[1]
+                    / "RADIal"
+                    / "DBReader"
+                )
 
         self.dbreader_dir = Path(dbreader_dir)
 

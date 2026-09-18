@@ -1,22 +1,37 @@
+import argparse
+from pathlib import Path
 import cv2
 
 from camera.src.camera_detector import CameraDetector
-
-
-VIDEO_PATH = (
-    r"C:\Users\lokit\Desktop\RADIal_data"
-    r"\RECORD@2020-11-21_13.44.44"
-    r"\RECORD@2020-11-21_13.44.44_preview.avi"
-)
+from config import get_default_recording_dir, find_video_file
 
 
 def main():
+    parser = argparse.ArgumentParser(description="RADIal Camera Object Detection")
+    parser.add_argument(
+        "--video",
+        default=None,
+        help="Path to camera video file (*preview.avi, *.avi, *.mp4).",
+    )
+    parser.add_argument(
+        "--recording",
+        default=None,
+        help="Path to RADIal recording folder.",
+    )
+    args = parser.parse_args()
+
+    if args.video:
+        video_path = Path(args.video).resolve()
+    else:
+        rec_dir = Path(args.recording).resolve() if args.recording else get_default_recording_dir()
+        video_path = find_video_file(rec_dir)
+
     detector = CameraDetector()
 
-    cap = cv2.VideoCapture(VIDEO_PATH)
+    cap = cv2.VideoCapture(str(video_path))
 
     if not cap.isOpened():
-        raise RuntimeError("Could not open RADIal video.")
+        raise RuntimeError(f"Could not open RADIal video: {video_path}")
 
     print("Starting camera object detection...")
     print("Press Q to quit.")

@@ -10,14 +10,26 @@ class SynchronizedFusionLoader:
     using the official RADIal DBReader.
     """
 
-    def __init__(self, sequence_dir, dbreader_dir):
+    def __init__(self, sequence_dir, dbreader_dir=None):
         self.sequence_dir = Path(sequence_dir)
-        self.dbreader_dir = Path(dbreader_dir)
 
         if not self.sequence_dir.exists():
             raise FileNotFoundError(
                 f"Sequence not found: {self.sequence_dir}"
             )
+
+        if dbreader_dir is None:
+            try:
+                from config import get_dbreader_dir
+                dbreader_dir = get_dbreader_dir(recording_dir=self.sequence_dir)
+            except Exception:
+                dbreader_dir = (
+                    self.sequence_dir.parents[1]
+                    / "RADIal"
+                    / "DBReader"
+                )
+
+        self.dbreader_dir = Path(dbreader_dir)
 
         if not self.dbreader_dir.exists():
             raise FileNotFoundError(

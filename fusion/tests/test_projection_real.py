@@ -1,21 +1,18 @@
 import numpy as np
-from pathlib import Path
+import pytest
 
+from config import get_camera_calibration_path
 from fusion.src.radar_camera_projector import (
     RadarCameraProjector,
 )
 
+CALIBRATION = get_camera_calibration_path()
 
-CALIBRATION = (
-    Path.home()
-    / "Desktop"
-    / "RADIal"
-    / "DBReader"
-    / "examples"
-    / "camera_calib.npy"
+
+@pytest.mark.skipif(
+    not CALIBRATION.exists(),
+    reason="RADIal camera calibration file not found",
 )
-
-
 def test_real_radar_projection():
 
     projector = RadarCameraProjector(

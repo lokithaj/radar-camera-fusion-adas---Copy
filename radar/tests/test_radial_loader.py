@@ -1,23 +1,15 @@
-from pathlib import Path
-
+import pytest
+from config import get_default_recording_dir, get_dbreader_dir
 from radar.src.radial_loader import RADIalLoader
 
+DATASET = get_default_recording_dir()
+DBREADER = get_dbreader_dir(DATASET)
 
-DATASET = (
-    Path.home()
-    / "Desktop"
-    / "RADIal_data"
-    / "RECORD@2020-11-21_13.44.44"
+
+@pytest.mark.skipif(
+    not (DATASET.exists() and DBREADER.exists()),
+    reason="RADIal dataset or DBReader not found",
 )
-
-DBREADER = (
-    Path.home()
-    / "Desktop"
-    / "RADIal"
-    / "DBReader"
-)
-
-
 def test_load_real_radial_frame():
     loader = RADIalLoader(
         DATASET,

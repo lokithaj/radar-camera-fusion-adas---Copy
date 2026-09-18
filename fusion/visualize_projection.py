@@ -8,22 +8,15 @@ from fusion.src.radar_camera_projector import (
 )
 
 
-CALIBRATION = (
-    Path.home()
-    / "Desktop"
-    / "RADIal"
-    / "DBReader"
-    / "examples"
-    / "camera_calib.npy"
+from config import (
+    get_camera_calibration_path,
+    get_default_recording_dir,
+    find_video_file,
 )
 
-VIDEO_PATH = (
-    Path.home()
-    / "Desktop"
-    / "RADIal_data"
-    / "RECORD@2020-11-21_13.44.44"
-    / "RECORD@2020-11-21_13.44.44_preview.avi"
-)
+
+CALIBRATION = get_camera_calibration_path()
+VIDEO_PATH = find_video_file(get_default_recording_dir())
 
 
 def main():

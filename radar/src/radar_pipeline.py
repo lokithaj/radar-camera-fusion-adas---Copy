@@ -4,6 +4,7 @@ from radar.src.radar_frame import RadarFrameBuilder
 from radar.src.fft_processor import RadarFFTProcessor
 from radar.src.cfar import CACFAR
 from radar.src.radar_points import RadarPointExtractor
+from radar.src.velocity_converter import RadarVelocityConverter
 
 
 class RadarPipeline:
@@ -48,9 +49,18 @@ class RadarPipeline:
         )
 
         # 4. Convert detection bins into radar points
+        max_range_m = 103.0
+        if range_resolution is not None and range_resolution != 0.2:
+            max_range_m = float(samples_per_chirp * range_resolution)
+
         self.point_extractor = RadarPointExtractor(
-            range_resolution=range_resolution,
+            samples_per_chirp=samples_per_chirp,
+            max_range_m=max_range_m,
+        )
+
+        self.velocity_converter = RadarVelocityConverter(
             velocity_resolution=velocity_resolution,
+            num_doppler_bins=num_chirps,
         )
 
     def process(self, adc0, adc1, adc2, adc3):
@@ -132,9 +142,27 @@ class RadarPipeline:
         # ---------------------------------------------------------
         # 7. Convert detections into radar points
         # ---------------------------------------------------------
-        points = self.point_extractor.extract(
-            detections
-        )
+        detection_indices = self.detection_points(detections)
+
+        if len(detection_indices) == 0:
+            points = np.empty((0, 4), dtype=np.float32)
+        else:
+            range_bins = detection_indices[:, 0]
+            doppler_bins = detection_indices[:, 1]
+            ranges_m = np.array(
+                [self.point_extractor.range_from_bin(rb) for rb in range_bins],
+                dtype=np.float32,
+            )
+            velocities_mps = np.array(
+                [self.velocity_converter.convert(db) for db in doppler_bins],
+                dtype=np.float32,
+            )
+            points = np.column_stack([
+                range_bins.astype(np.float32),
+                doppler_bins.astype(np.float32),
+                ranges_m,
+                velocities_mps,
+            ]).astype(np.float32)
 
         return {
             "complex_frame": complex_frame,

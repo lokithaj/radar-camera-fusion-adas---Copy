@@ -1,25 +1,16 @@
+import argparse
+from pathlib import Path
+
 import cv2
 import numpy as np
 
 from camera.src.camera_detector import CameraDetector
 from radar.src.radial_loader import RADIalLoader
 from radar.src.radar_pipeline import RadarPipeline
-
-
-DATASET = (
-    r"C:\Users\lokit\Desktop\RADIal_data"
-    r"\RECORD@2020-11-21_13.44.44"
-)
-
-DBREADER = (
-    r"C:\Users\lokit\Desktop\RADIal"
-    r"\DBReader"
-)
-
-VIDEO_PATH = (
-    r"C:\Users\lokit\Desktop\RADIal_data"
-    r"\RECORD@2020-11-21_13.44.44"
-    r"\RECORD@2020-11-21_13.44.44_preview.avi"
+from config import (
+    get_default_recording_dir,
+    get_dbreader_dir,
+    find_video_file,
 )
 
 
@@ -55,12 +46,34 @@ def normalize_radar(rd_power):
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Radar + Camera Perception Demo")
+    parser.add_argument(
+        "--recording",
+        default=None,
+        help="Path to RADIal recording folder (auto-discovered if omitted).",
+    )
+    parser.add_argument(
+        "--dbreader",
+        default=None,
+        help="Path to RADIal DBReader folder (auto-discovered if omitted).",
+    )
+    parser.add_argument(
+        "--video",
+        default=None,
+        help="Path to camera video file (auto-discovered if omitted).",
+    )
+    args = parser.parse_args()
+
+    recording_path = Path(args.recording).resolve() if args.recording else get_default_recording_dir()
+    dbreader_dir = get_dbreader_dir(recording_path, args.dbreader)
+    video_path = Path(args.video).resolve() if args.video else find_video_file(recording_path)
 
     print("Loading radar data...")
+    print("Recording:", recording_path)
 
     loader = RADIalLoader(
-        DATASET,
-        dbreader_dir=DBREADER,
+        recording_path,
+        dbreader_dir=dbreader_dir,
     )
 
     pipeline = RadarPipeline()
@@ -94,12 +107,12 @@ def main():
     detector = CameraDetector()
 
     cap = cv2.VideoCapture(
-        VIDEO_PATH
+        str(video_path)
     )
 
     if not cap.isOpened():
         raise RuntimeError(
-            "Could not open RADIal camera video."
+            f"Could not open RADIal camera video: {video_path}"
         )
 
     while True:
