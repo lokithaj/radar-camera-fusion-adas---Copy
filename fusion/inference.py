@@ -1,5 +1,11 @@
 import argparse
 from pathlib import Path
+import sys
+
+# Ensure project root is in sys.path
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 import cv2
 import numpy as np
@@ -7,6 +13,10 @@ import numpy as np
 from fusion.src.sync_loader import SynchronizedFusionLoader
 from fusion.src.radar_camera_projector import RadarCameraProjector
 from fusion.src.fusion_model import FusionMLModel
+from fusion.src.radar_sparsifier import (
+    AdaptiveRadarSparsifier,
+    CameraGuidedRadarSparsifier,
+)
 
 from radar.src.radar_frame import RadarFrameBuilder
 from radar.src.fft_processor import RadarFFTProcessor
@@ -22,6 +32,7 @@ from config import (
     DEFAULT_MODEL_PATH,
     DEFAULT_YOLO_MODEL,
     DEFAULT_OUTPUT_DIR,
+    DEFAULT_RADAR_RETENTION_RATIO,
     get_dbreader_dir,
     get_radar_calibration_path,
     get_camera_calibration_path,
@@ -249,6 +260,8 @@ def run(
     radar_calib_path=None,
     camera_calib_path=None,
     output_dir=None,
+    retention_ratio=0.5,
+    sparsification_mode="radar",
 ):
     """Run inference on a user-selected recording."""
 
@@ -326,6 +339,21 @@ def run(
         model_file
     )
 
+    if sparsification_mode == "radar":
+        sparsifier = AdaptiveRadarSparsifier(
+            retention_ratio=0.5 if retention_ratio is None else retention_ratio
+        )
+    elif sparsification_mode == "camera":
+        sparsifier = CameraGuidedRadarSparsifier(
+            retention_ratio=0.5 if retention_ratio is None else retention_ratio
+        )
+    elif sparsification_mode == "none":
+        sparsifier = None
+    else:
+        raise ValueError(
+            f"Unknown sparsification_mode: '{sparsification_mode}'. Supported: 'none', 'radar', 'camera'"
+        )
+
     print(
         "Trained fusion model loaded."
     )
@@ -356,6 +384,41 @@ def run(
             radar_objects = process_radar(
                 data,
                 radar_calibration,
+            )
+
+            original_radar_count = len(radar_objects)
+
+            if sparsification_mode == "radar":
+                radar_objects = sparsifier.select(radar_objects)
+            elif sparsification_mode == "camera":
+                if radar_objects:
+                    candidate_xyz = np.array(
+                        [
+                            [obj["x_m"], obj["y_m"], obj["z_m"]]
+                            for obj in radar_objects
+                        ],
+                        dtype=np.float64,
+                    )
+                    cand_pixels, cand_valid = projector.project_valid(
+                        candidate_xyz,
+                        image.shape[1],
+                        image.shape[0],
+                    )
+                else:
+                    cand_pixels = np.empty((0, 2), dtype=np.float64)
+                    cand_valid = np.empty((0,), dtype=bool)
+
+                radar_objects = sparsifier.select(
+                    radar_objects,
+                    projected_pixels=cand_pixels,
+                    valid_in_fov=cand_valid,
+                    camera_objects=camera_objects,
+                )
+            elif sparsification_mode == "none":
+                pass
+
+            print(
+                f"Radar objects: {original_radar_count} -> {len(radar_objects)}"
             )
 
         except Exception as error:
@@ -672,6 +735,22 @@ def main():
         help=f"Directory to save outputs (default: {DEFAULT_OUTPUT_DIR}).",
     )
 
+    parser.add_argument(
+        "--retention-ratio",
+        type=float,
+        default=DEFAULT_RADAR_RETENTION_RATIO,
+        choices=[1.0, 0.75, 0.50, 0.25, 0.10],
+        help="Adaptive radar sparsification retention ratio (default: 0.5). Supported: 1.0, 0.75, 0.50, 0.25, 0.10",
+    )
+
+    parser.add_argument(
+        "--sparsification-mode",
+        type=str,
+        default="radar",
+        choices=["none", "radar", "camera"],
+        help="Sparsification mode to use: 'none' (full baseline), 'radar' (Stage 5 radar-only), 'camera' (Stage 5b camera-guided). Default: radar.",
+    )
+
     args = parser.parse_args()
 
     run(
@@ -681,6 +760,8 @@ def main():
         radar_calib_path=args.radar_calib,
         camera_calib_path=args.camera_calib,
         output_dir=args.output_dir,
+        retention_ratio=args.retention_ratio,
+        sparsification_mode=args.sparsification_mode,
     )
 
 

@@ -22,6 +22,10 @@ DEFAULT_TRAINING_DATA = PROJECT_ROOT / "fusion" / "training" / "fusion_training_
 DEFAULT_TEST_DATA = PROJECT_ROOT / "fusion" / "training" / "fusion_test_data.csv"
 DEFAULT_GROUND_TRUTH = PROJECT_ROOT / "fusion" / "training" / "ground_truth.csv"
 
+# Stage 5 Adaptive Pre-Fusion Radar Sparsification
+DEFAULT_RADAR_RETENTION_RATIO = float(os.environ.get("RADAR_RETENTION_RATIO", 0.5))
+SUPPORTED_RETENTION_RATIOS = [1.0, 0.75, 0.50, 0.25, 0.10]
+
 
 def get_radial_root():
     """Locate RADIal repository root directory."""
