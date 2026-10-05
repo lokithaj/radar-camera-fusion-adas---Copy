@@ -664,7 +664,7 @@ def run(
             image,
             (1280, 720),
         )
-
+        print("DISPLAYING FRAME")
         cv2.imshow(
             "RADIal Radar-Camera ML Fusion",
             display,
@@ -679,7 +679,7 @@ def run(
 
         if key == ord("q"):
             break
-
+    cv2.waitKey(0)
     cv2.destroyAllWindows()
 
     print(
